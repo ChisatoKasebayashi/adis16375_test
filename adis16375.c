@@ -27,7 +27,7 @@ int fd;
 
 int set_spi_mode(uint8_t mode)
 {
-	printf("[mode]%d ", mode);
+	//printf("[mode]%d ", mode);
 	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
 	if(ret == -1) pabort("cant set spi mode");
 	ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
@@ -58,9 +58,9 @@ int set_spi_speed(uint32_t speed)
 	return ret;
 }
 
-static void transfer(int fd)
+static void transfer(int fd, uint8_t reg)
 {
-	uint8_t tx[] = {0x00, 0x00, 0x7E, 0x00};
+	uint8_t tx[] = {0x00, 0x00, reg, 0x00};
 	uint8_t rx[ARRAY_SIZE(tx)] = {0, };
 	struct spi_ioc_transfer tr = {
 		.tx_buf = (unsigned long)tx,
@@ -70,17 +70,20 @@ static void transfer(int fd)
 		.speed_hz = speed,
 		.bits_per_word = bits,
 	};
-	printf("[len]%d ", tr.len);
+	//printf("[len]%d ", tr.len);
 
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if(ret == -1) pabort("cant send message");
 
+	if(mode != 4)
+	{
 	for(ret = 0; ret < ARRAY_SIZE(tx); ret++)
 	{
 		if(!(ret % 6)) puts("");
 		printf("%.2X ", rx[ret]);
 	}
 	printf("\n");
+	}
 }
 
 int main()
@@ -98,16 +101,16 @@ int main()
 		printf("set_spi_speed Error!\n");
 		exit(1);
 	}
-	for(i = 0; i < 3; i++)
+	for(i = 0; 1; i++)
 	{
-		printf(" -------- Test -------- \n");
+	//	printf(" -------- Test -------- \n");
 		mode =0;
 		mode |= SPI_CS_HIGH;
 		ret = set_spi_mode(mode);
 		if(ret == -1){
 			printf("set_spi_mode[CS_HIGH] Error!\n");
 		}
-		transfer(fd);
+		transfer(fd, 0x00);
 		mode =0;
 		mode |= SPI_CPOL;
 		mode |= SPI_CPHA;
@@ -116,7 +119,16 @@ int main()
 		if(ret == -1){
 			printf("set_spi_mode[MODE:4] Error!\n");
 		}
-		transfer(fd);//3F F7
+		if(i%2==0)
+		{
+			printf("[Z_GYRO_OUT] ");
+			transfer(fd, 0x1A);//3F F7
+		}
+		else
+		{
+			printf("[Z_GYRO_LOW] ");
+			transfer(fd, 0x18);//3F F7
+		}
 	//	ret = set_spi_mode(mode);
 	//	transfer(fd);
 	//	mode = SPI_NO_CS;
