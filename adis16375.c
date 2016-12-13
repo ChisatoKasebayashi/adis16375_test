@@ -27,7 +27,7 @@ int fd;
 
 int set_spi_mode(uint8_t mode)
 {
-	printf("mode: %d\n", mode);
+	printf("[mode]%d ", mode);
 	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
 	if(ret == -1) pabort("cant set spi mode");
 	ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
@@ -61,7 +61,6 @@ int set_spi_speed(uint32_t speed)
 static void transfer(int fd)
 {
 	uint8_t tx[] = {0x00, 0x00, 0x7E, 0x00};
-
 	uint8_t rx[ARRAY_SIZE(tx)] = {0, };
 	struct spi_ioc_transfer tr = {
 		.tx_buf = (unsigned long)tx,
@@ -71,7 +70,7 @@ static void transfer(int fd)
 		.speed_hz = speed,
 		.bits_per_word = bits,
 	};
-	printf("len :%d", tr.len);
+	printf("[len]%d ", tr.len);
 
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if(ret == -1) pabort("cant send message");
@@ -86,6 +85,7 @@ static void transfer(int fd)
 
 int main()
 {
+	int i;
 	fd = open(device, O_RDWR);
 	if(fd < 0) pabort("cant open device");
 	ret = set_spi_bit(bits);
@@ -98,24 +98,32 @@ int main()
 		printf("set_spi_speed Error!\n");
 		exit(1);
 	}
-	mode |= SPI_CS_HIGH;
-	ret = set_spi_mode(mode);
-	if(ret == -1){
-		printf("set_spi_mode[CS_HIGH] Error!\n");
+	for(i = 0; i < 3; i++)
+	{
+		printf(" -------- Test -------- \n");
+		mode =0;
+		mode |= SPI_CS_HIGH;
+		ret = set_spi_mode(mode);
+		if(ret == -1){
+			printf("set_spi_mode[CS_HIGH] Error!\n");
+		}
+		transfer(fd);
+		mode =0;
+		mode |= SPI_CPOL;
+		mode |= SPI_CPHA;
+		ret = set_spi_mode(mode);
+		//printf("writed mode is %d\n",mode);
+		if(ret == -1){
+			printf("set_spi_mode[MODE:4] Error!\n");
+		}
+		transfer(fd);//3F F7
+	//	ret = set_spi_mode(mode);
+	//	transfer(fd);
+	//	mode = SPI_NO_CS;
 	}
-	transfer(fd);
-	mode =0;
-	mode |= SPI_CPOL;
-	mode |= SPI_CPHA;
-	ret = set_spi_mode(mode);
-	if(ret == -1){
-		printf("set_spi_mode[MODE:4] Error!\n");
-	}
-	transfer(fd);
-	mode = SPI_NO_CS;
+	close(fd);
 //	set_spi_mode(mode);
 
-	close(fd);
 
 	return ret;
 }
