@@ -27,6 +27,7 @@ int fd;
 
 int set_spi_mode(uint8_t mode)
 {
+	printf("mode: %d\n", mode);
 	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
 	if(ret == -1) pabort("cant set spi mode");
 	ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
@@ -78,8 +79,9 @@ static void transfer(int fd)
 	for(ret = 0; ret < ARRAY_SIZE(tx); ret++)
 	{
 		if(!(ret % 6)) puts("");
-		printf("%.2X", rx[ret]);
+		printf("%.2X ", rx[ret]);
 	}
+	printf("\n");
 }
 
 int main()
@@ -87,8 +89,31 @@ int main()
 	fd = open(device, O_RDWR);
 	if(fd < 0) pabort("cant open device");
 	ret = set_spi_bit(bits);
+	if(ret==-1){
+		printf("set_spi_bit Error!\n");
+		exit(1);
+	}
 	ret = set_spi_speed(speed);
-
+	if(ret==-1){
+		printf("set_spi_speed Error!\n");
+		exit(1);
+	}
+	mode |= SPI_CS_HIGH;
+	ret = set_spi_mode(mode);
+	if(ret == -1){
+		printf("set_spi_mode[CS_HIGH] Error!\n");
+	}
+	transfer(fd);
+	mode =0;
+	mode |= SPI_CPOL;
+	mode |= SPI_CPHA;
+	ret = set_spi_mode(mode);
+	if(ret == -1){
+		printf("set_spi_mode[MODE:4] Error!\n");
+	}
+	transfer(fd);
+	mode = SPI_NO_CS;
+//	set_spi_mode(mode);
 
 	close(fd);
 
