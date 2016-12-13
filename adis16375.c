@@ -48,13 +48,38 @@ int set_spi_bit(uint8_t bit)
 
 int set_spi_speed(uint32_t speed)
 {
-	printf("set _spi_speed: speed = %x\n",speed);
+	printf("set _spi_speed: speed = %d\n",speed);
 	ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	if(ret == -1) pabort("cnat set max speed hz");
 	ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
 	if(ret == -1) pabort("cant get max speed hz");
 
 	return ret;
+}
+
+static void transfer(int fd)
+{
+	uint8_t tx[] = {0x00, 0x00, 0x7E, 0x00};
+
+	uint8_t rx[ARRAY_SIZE(tx)] = {0, };
+	struct spi_ioc_transfer tr = {
+		.tx_buf = (unsigned long)tx,
+		.rx_buf = (unsigned long)rx,
+		.len = ARRAY_SIZE(tx),
+		.delay_usecs = delay,
+		.speed_hz = speed,
+		.bits_per_word = bits,
+	};
+	printf("len :%d", tr.len);
+
+	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	if(ret == -1) pabort("cant send message");
+
+	for(ret = 0; ret < ARRAY_SIZE(tx); ret++)
+	{
+		if(!(ret % 6)) puts("");
+		printf("%.2X", rx[ret]);
+	}
 }
 
 int main()
